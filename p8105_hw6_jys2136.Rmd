@@ -27,6 +27,7 @@ theme_set(theme_bw()) + theme(axis.text.x = element_text(size = 9),
 
 ### Problem 1
 
+#### Importing birthweight data
 ```{r loading_data}
 
 bwt_df = 
@@ -144,6 +145,24 @@ From the RMSE plot above, **Model 3**, having the loswet RMSE, appears to be the
 
 
 
+### Problem 2
+
+#### Importing weather data
+```{r, weather_data}
+
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+
+```
 
 
 
