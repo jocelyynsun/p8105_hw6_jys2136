@@ -5,7 +5,7 @@ date: "12/3/2021"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 
 library(tidyverse)
 library(viridis)
@@ -24,7 +24,35 @@ theme_set(theme_bw()) + theme(axis.text.x = element_text(size = 9),
                               axis.text.y = element_text(size = 9),
                               legend.position = "bottom")
 
+```
+
+
+### Problem 1
+
+```{r loading_data}
+
+bwt_df = 
+  read_csv("./data/birthweight.csv") %>%
+  janitor::clean_names() %>%
+   mutate(
+    babysex = as.factor(babysex),
+    frace = as.factor(frace),
+    mrace = as.factor(mrace),
+    malform = as.factor(malform)
+  )
+
+#checking for missing data
+sapply(bwt_df, function(x) sum(is.na(x)))
+
+```
+
+There are no missing values in this data set as seen in the output.
+
+#### Building a model
+
+```{r}
 
 
 
 ```
+
