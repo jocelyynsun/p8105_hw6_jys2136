@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 )
 theme_set(theme_bw()) + theme(axis.text.x = element_text(size = 9),
                               axis.text.y = element_text(size = 9),
+                              plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
                               legend.position = "bottom")
 
 ```
@@ -46,6 +47,8 @@ sapply(bwt_df, function(x) sum(is.na(x)))
 ```
 
 There are no missing values in this data set as seen in the output.
+
+The birthweight dataset has **`r bwt_df %>% nrow()`** observations and **`r bwt_df %>% ncol()`** variables. These variables are:  **`r bwt_df %>% ls()`**.
 
 #### Building a model
 
@@ -141,7 +144,7 @@ cv_df %>%
 
 ```
 
-From the RMSE plot above, **Model 3**, having the loswet RMSE, appears to be the best model. Therefore, the best predictors to use are **head circumference, length, sex, and all interactions, including a three way interaction** to predict baby's birthweight.
+From the RMSE plot above, **Model 3**, having the lowest RMSE, appears to be the best model. Therefore, the best predictors to use are **head circumference, length, sex, and all interactions, including a three way interaction** to predict baby's birthweight.
 
 
 
@@ -164,10 +167,108 @@ weather_df =
 
 ```
 
+The weather dataset has **`r weather_df %>% nrow()`** observations and **`r weather_df %>% ncol()`** variables. These variables are:  **`r weather_df %>% ls()`**.
+
+#### Bootstraping
+
+```{r, boot_sample}
+
+set.seed(1)
+
+boot_sample = function(df) {
+  
+  sample_frac(df, replace = TRUE)
+  
+}
+
+bstrap_df = 
+  data_frame(
+    strap_number = 1:5000,
+    strap_sample = rerun(5000, boot_sample(weather_df))
+  )
+
+```
+
+#### Looking at estimated coefficients of determination (R^2)
+
+```{r, coeff_det}
+
+bstrap_1 = 
+  bstrap_df %>% 
+  mutate(
+    models = map(strap_sample, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::glance)) %>% 
+  select(-strap_sample, -models) %>%
+  unnest(results) 
+
+bstrap_1 %>%
+  janitor::clean_names() %>%
+  summarize(
+    lower_limit = quantile(r_squared, c(.025)),
+    upper_limit = quantile(r_squared, c(.975))
+  ) %>% 
+  knitr::kable()
+
+#Plotting the distribution of r^2 estimates
+
+bstrap_1 %>%
+  ggplot(aes(x = r.squared)) + 
+  geom_density() +
+  labs(
+    x = "R Squared Values",
+    y = "Density",
+    title = "Distribution of simulated R Squared estimates"
+  ) 
+
+```
 
 
 
+#### Looking at estimated log(beta0*beta1)
+
+```{r, log_beta}
+
+log_beta_h = function(df) {
+    log(df[1,2]*df[2,2]) %>% 
+    tibble() %>% 
+    mutate(
+      log_beta = .$estimate) %>% 
+    select(log_beta)
+}
 
 
+bstrap_2 = 
+  bstrap_df %>% 
+  mutate(
+    models = map(strap_sample, ~lm(tmax ~ tmin, data = .x) ),
+    results = map(models, broom::tidy),
+    log_beta = map(results, log_beta_h)) %>%
+  select(-strap_sample, -models) %>%
+  unnest(log_beta) 
 
+bstrap_2 %>%
+  janitor::clean_names() %>%
+  summarize(
+    lower_limit = quantile(log_beta, c(.025)),
+    upper_limit = quantile(log_beta, c(.975))
+  ) %>% 
+  knitr::kable()
 
+#Plotting the distribution of log(beta0*beta1) estimates
+
+bstrap_2 %>%
+  ggplot(aes(x = log_beta)) + 
+  geom_density() +
+  labs(
+    x = "Log_beta Values",
+    y = "Density",
+    title = "Distribution of simulated log(beta0*beta1) estimates"
+  ) 
+
+```
+
+The 95% CI of R squared is: (`r quantile(bstrap_1$r.squared, probs=0.025)` , `r quantile(bstrap_1$r.squared, probs=0.975)`).
+
+The 95% CI of log(beta0*beta1) is: (`r quantile(bstrap_2$log_beta, probs=0.025)` , `r quantile(bstrap_2$log_beta, probs=0.975)`).
+
+From the distributions of the estimated r^2 and log(beta0*beta1) values appear to be approximately normal. 
