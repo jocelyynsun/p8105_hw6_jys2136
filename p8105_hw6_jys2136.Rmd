@@ -9,7 +9,6 @@ output: github_document
 
 library(tidyverse)
 library(modelr)
-library(viridis)
 
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -19,8 +18,6 @@ knitr::opts_chunk$set(
   fig.height = 6,
   out.width = "90%"
 )
-scale_colour_discrete = scale_color_viridis_d
-scale_fill_discrete = scale_fill_viridis_d
 theme_set(theme_bw()) + theme(axis.text.x = element_text(size = 9),
                               axis.text.y = element_text(size = 9),
                               legend.position = "bottom")
@@ -96,9 +93,54 @@ Comparing Model 1 with two others:
 - One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 
 **Model 2:**
-bwt ~ 
+bwt ~ blength + gaweeks
 
+**Model 3:**
+bwt ~ babysex + blength + bhead + babysex * blength + babysex * bhead + blength * bhead + babysex * blength * bhead
 
+```{r, cross_validation}
+
+cv_df =
+  crossv_mc(bwt_df, 100) %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble))
+
+cv_df = 
+  cv_df  %>% 
+  mutate(
+    m1 = map(train, ~lm(bwt ~ wtgain + mheight + momage + mrace + fincome, data = .x)),
+    m2 = map(train, ~lm(bwt ~ blength + gaweeks,  data = .x)),
+    m3 = map(train, ~lm(bwt ~ babysex + blength + bhead + babysex * blength + babysex * bhead + blength * bhead + babysex * blength * bhead, data = .x))
+    ) %>% 
+  mutate(
+    rmse_m1 = map2_dbl(m1, test, ~rmse(model = .x, data = .y)),
+    rmse_m2 = map2_dbl(m2, test, ~rmse(model = .x, data = .y)),
+    rmse_m3 = map2_dbl(m3, test, ~rmse(model = .x, data = .y)))
+
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) +
+  geom_violin(aes(fill = model)) +
+  labs(
+    x = "Model",
+    y = "RMSE",
+    title = "RMSE distribution across 3 models"
+  ) +
+  scale_x_discrete(labels = c(
+    "m1" = "Model 1", 
+    "m2" = "Model 2",
+    "m3" = "Model 3")) +
+  theme(legend.position = "none")
+
+```
+
+From the RMSE plot above, **Model 3**, having the loswet RMSE, appears to be the best model. Therefore, the best predictors to use are **head circumference, length, sex, and all interactions, including a three way interaction** to predict baby's birthweight.
 
 
 
