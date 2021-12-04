@@ -8,6 +8,7 @@ output: github_document
 ```{r setup, include = FALSE}
 
 library(tidyverse)
+library(modelr)
 library(viridis)
 
 knitr::opts_chunk$set(
@@ -50,9 +51,62 @@ There are no missing values in this data set as seen in the output.
 
 #### Building a model
 
-```{r}
+There are multiple mechanisms--biological, social, and economical--that influence birth outcomes. Low birthweight is a major predictor of prenatal mortality and comorbid with noncommunicable diseases, such as diabetes, later in life [(1)](https://bmcresnotes.biomedcentral.com/articles/10.1186/s13104-019-4155-x). The World Health Organization (WHO) defines low birthweight as weight at birth below 2500g or 5.5lbs. Globally, it is estimated that 15 - 20% of all births are low birthweights [(2)](https://apps.who.int/nutrition/publications/globaltargets2025_policybrief_lbw/en/index.html).
 
+Maternal nutrition is highly associated with birth outcomes [(2)](https://apps.who.int/nutrition/publications/globaltargets2025_policybrief_lbw/en/index.html). Furthermore, maternal nutrition is also associated with gestational weight gain [(3)](https://bmcpregnancychildbirth.biomedcentral.com/articles/10.1186/s12884-019-2643-6). Therefore, we propose a model where maternal weight gain during pregnancy is a primary predictor of low birthweight, adjusting for mother's height, mother's age at delivery, mother's race, and family income.
 
+**Model 1:**
+bwt ~ wtgain + mheight + momage + mrace + fincome
+
+```{r, model_1}
+
+wt_model = lm(bwt ~ wtgain + mheight + momage + mrace + fincome, data = bwt_df)
+
+wt_model %>% 
+  broom::tidy() %>%
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits = 3)
 
 ```
+
+```{r, residuals_fitted_values}
+
+bwt_df %>%
+  modelr::add_predictions(wt_model, var = "pred") %>%
+  modelr::add_residuals(wt_model, var = "resid") %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(se = FALSE, method = "lm", color = "red") +
+  labs(
+    x = "Predicted values",
+    y = "Residuals",
+    title = "Residuals vs. predicted values",
+    caption = "Regression diagnostics"
+  )
+
+```
+
+As we can see from the distribution of residuals, there is no clear trend and tend to cluster around the center of the plot. The residuals are also rather symmetrically distributed around 0. We can conclude that the residuals are rather randomly distributed, and this may be a good model to consider using. 
+
+#### Model Comparisons
+
+Comparing Model 1 with two others:
+
+- One using length at birth and gestational age as predictors (main effects only)  
+- One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+
+**Model 2:**
+bwt ~ 
+
+
+
+
+
+
+
+
+
+
+
+
 
